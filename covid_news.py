@@ -42,6 +42,7 @@ import re
 import PyPDF2
 from googletrans import Translator
 import argparse
+
 parser = argparse.ArgumentParser("python covid_news.py")
 parser.add_argument("-w", type=int, help="view an entry from this many weeks back")
 parser.add_argument("-c", type=int, help="how many characters to view, e.g. 200")
@@ -50,7 +51,7 @@ args = parser.parse_args()
 status_updates = "status_updates.txt"
 slash_pat = re.compile(r"/.*/")
 time_check = -1
-my_run_list = [] # this list will store the database during the run
+my_run_list = []  # this list will store the database during the run
 if os.path.exists(status_updates):
     with open(status_updates, 'r') as f:
         for line in f:
@@ -59,13 +60,15 @@ if os.path.exists(status_updates):
 if args.w:
     print(f"Retrieving entry from {args.w} weeks ago")
     if args.w > 0:
-        time_check = - (args.w + 1) # we will always be reading from the end of the file
+        time_check = - (args.w + 1)  # we will always be reading from the end of the file
 if args.c:
     print(f"Displaying {args.c} characters:")
 if args.t:
     print("Translating to English")
 translator = Translator()
 first_run = False
+
+
 def check_logs():
     """
     :return: nothing, creates log file if not found in current folder
@@ -73,6 +76,8 @@ def check_logs():
     if not os.path.exists(status_updates):
         with open(status_updates, 'w') as f:
             print("creating log file")
+
+
 def make_order(entry):
     """
     :param entry: this is a one-line entry that is to be stored
@@ -87,9 +92,9 @@ def get_extract_pdf(fh):
     :return: nothing, will send entries to make_order()
     """
     pdfFileObj = open(fh, 'rb')
-    pdfReader = PyPDF2.PdfFileReader(pdfFileObj) # creating a pdf reader object
-    pageObj = pdfReader.getPage(0) # creating a page object
-    page_str = str(pageObj.extractText()) # extracting text from page
+    pdfReader = PyPDF2.PdfFileReader(pdfFileObj)  # creating a pdf reader object
+    pageObj = pdfReader.getPage(0)  # creating a page object
+    page_str = str(pageObj.extractText())  # extracting text from page
     page_lst = page_str.split("\n")
     my_extractor = []
     on_switch = False
@@ -137,7 +142,9 @@ def display_update():
             my_entries.append(line.replace('.', '.\n'))
         if args.t:
             print(translator.translate(my_entries[time_check][:args.c]).text)
-        else: print(my_entries[time_check][:args.c])
+        else:
+            print(my_entries[time_check][:args.c])
+
 
 def write_log():
     """
@@ -149,18 +156,7 @@ def write_log():
                 print(line, file=f)
 
 
-
-
-
 check_logs()
 get_folkhalso_update()
 write_log()
 display_update()
-
-
-
-
-
-
-
-
