@@ -9,10 +9,12 @@
         the PDF in either its original language or translated to english.
     List of functions:
         check_logs() : will see if there is a .txt log file and create it if it doesn't exist
+        make_order() : a function that will take extracted entries and append it to database
         get_extract_pdf() : parses PDF files, opens the first page and extracts the information that is a status update
-        stores extracted info in the log file.
+        stores extracted info in the database
         get_folkhalso_update() : scrapes the url for PDF files, downloads them if they are not already downloaded,
-        sends them to get_extract_pdf(), and prints the requested post to STDOUT.
+        sends them to get_extract_pdf(), when all information is retrieved and database is rebuilt, it is written to
+        the log file and the requested post prints to STDOUT.
 
 
     List of non-standard modules:
@@ -70,7 +72,11 @@ def check_logs():
         with open(status_updates, 'w') as f:
             print("creating log file")
 def make_order(entry):
-     my_run_list.insert(0, entry.strip())
+    """
+    :param entry: this is a one-line entry that is to be stored
+    :return: nothing, the database is stored in memory during execution and the entry is added at index 0
+    """
+    my_run_list.insert(0, entry.strip())
 
 
 def get_extract_pdf(fh):
