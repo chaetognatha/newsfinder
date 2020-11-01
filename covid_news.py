@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 """
-    Title: cluster.py
+    Title: covid_news.py
     Date: 2020-11-01
     Author: Mattis Knulst
     Description:
@@ -10,13 +10,15 @@
         entire latest update in Swedish.
     List of functions:
         check_logs() : will see if there is a .txt log file and create it if it doesn't exist
+        read_logs() : will read logs into memory
+        write_logs() : will dump the logs from memory into files
         make_order() : a function that will take extracted entries and append it to database
         get_extract_pdf() : parses PDF files, opens the first page and extracts the information that is a status update
         stores extracted info in the database
-        get_folkhalso_update() : scrapes the url for PDF files, downloads them if they are not already downloaded,
-        sends them to get_extract_pdf()
+        get_folkhalso_update() : scrapes the url for PDF files, downloads them if they are not already downloaded i.e.
+        not in the download.txt, sends them to get_extract_pdf()
         display_update(): will show appropriate text in STDOUT
-        write_log(): will write the database to the log file
+        write_log(): will write logs from memory
 
 
     List of non-standard modules:
@@ -32,6 +34,12 @@
 
     Usage:
         python covid_news.py [-h] [-w W] [-c C] [-t]
+
+    Comments:
+        If printing a certain number of characters in the original language, the program will give a helpful
+        error message if the number of characters given should exceed the total of the entry, this does not work
+        with the translated text. However, if the given number of characters does exceed the max, it will just default
+        to printing the entire entry.
 
 """
 import os
@@ -49,14 +57,12 @@ parser.add_argument("-c", type=int, help="how many characters to view, e.g. 200"
 parser.add_argument("-t", help="translate into English", action="store_true")
 args = parser.parse_args()
 status_updates = "status_updates.txt"
+download_log = "downloads.txt"
 slash_pat = re.compile(r"/.*/")
 time_check = -1
 my_run_list = []  # this list will store the database during the run
-if os.path.exists(status_updates):
-    with open(status_updates, 'r') as f:
-        for line in f:
-            if line:
-                my_run_list.append(line.strip())
+my_file_list = [] # this is a list of the pdf files that are already retrieved
+
 if args.w:
     print(f"Retrieving entry from {args.w} weeks ago")
     if args.w > 0:
@@ -66,16 +72,21 @@ if args.c:
 if args.t:
     print("Translating to English")
 translator = Translator()
-first_run = False
 
+def read_log(log, my_list):
+    if os.path.exists(log):
+        with open(log, 'r') as f:
+            for line in f:
+                if line:
+                    my_list.append(line.strip())
 
-def check_logs():
+def check_logs(log):
     """
     :return: nothing, creates log file if not found in current folder
     """
-    if not os.path.exists(status_updates):
-        with open(status_updates, 'w') as f:
-            print("creating log file")
+    if not os.path.exists(log):
+        with open(log, 'w') as f:
+            print(f"creating {log}")
 
 
 def make_order(entry):
@@ -83,7 +94,8 @@ def make_order(entry):
     :param entry: this is a one-line entry that is to be stored
     :return: nothing, the database is stored in memory during execution and the entry is added at index 0
     """
-    my_run_list.insert(0, entry.strip())
+    if entry not in my_run_list:
+        my_run_list.insert(0, entry.strip())
 
 
 def get_extract_pdf(fh):
@@ -124,10 +136,11 @@ def get_folkhalso_update():
             # print(current_link)
             get_this_url = r"https://www.folkhalsomyndigheten.se" + current_link
             file_name = slash_pat.sub('', current_link)
-            if not os.path.exists(file_name):
+            if file_name not in my_file_list:
                 print("Hang on, retrieving new .pdfs")
                 urllib.request.urlretrieve(get_this_url, file_name)
                 get_extract_pdf(file_name)
+                my_file_list.append(file_name)
             else:
                 continue
 
@@ -146,17 +159,21 @@ def display_update():
             print(my_entries[time_check][:args.c])
 
 
-def write_log():
+
+def write_log(fh, my_list):
     """
     :return: nothing, will print the updated entry list to file
     """
-    with open(status_updates, 'w') as f:
-        for line in my_run_list:
+    with open(fh, 'w') as f:
+        for line in my_list:
             if line.strip() != '':
                 print(line, file=f)
 
-
-check_logs()
+read_log(status_updates, my_run_list)
+read_log(download_log, my_file_list)
+check_logs(status_updates)
+check_logs(download_log)
 get_folkhalso_update()
-write_log()
+write_log(status_updates, my_run_list)
+write_log(download_log, my_file_list)
 display_update()
