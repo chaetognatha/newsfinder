@@ -6,15 +6,17 @@
     Description:
         This program will scrape PDF files from folkhalsomyndigheten.se, it looks for new content every time it is run
         stores entries, and allows the user to view the current or old status updates, extracted from the first page of
-        the PDF in either its original language or translated to english.
+        the PDF in either its original language or translated to english. Running without flags will just print the
+        entire latest update in Swedish.
     List of functions:
         check_logs() : will see if there is a .txt log file and create it if it doesn't exist
         make_order() : a function that will take extracted entries and append it to database
         get_extract_pdf() : parses PDF files, opens the first page and extracts the information that is a status update
         stores extracted info in the database
         get_folkhalso_update() : scrapes the url for PDF files, downloads them if they are not already downloaded,
-        sends them to get_extract_pdf(), when all information is retrieved and database is rebuilt, it is written to
-        the log file and the requested post prints to STDOUT.
+        sends them to get_extract_pdf()
+        display_update(): will show appropriate text in STDOUT
+        write_log(): will write the database to the log file
 
 
     List of non-standard modules:
@@ -48,7 +50,7 @@ args = parser.parse_args()
 status_updates = "status_updates.txt"
 slash_pat = re.compile(r"/.*/")
 time_check = -1
-my_run_list = [] #this list will store the database during the run
+my_run_list = [] # this list will store the database during the run
 if os.path.exists(status_updates):
     with open(status_updates, 'r') as f:
         for line in f:
@@ -57,7 +59,7 @@ if os.path.exists(status_updates):
 if args.w:
     print(f"Retrieving entry from {args.w} weeks ago")
     if args.w > 0:
-        time_check = - (args.w + 1)
+        time_check = - (args.w + 1) # we will always be reading from the end of the file
 if args.c:
     print(f"Displaying {args.c} characters:")
 if args.t:
@@ -82,7 +84,7 @@ def make_order(entry):
 def get_extract_pdf(fh):
     """
     :param fh: the file name of a PDF
-    :return: nothing, will append entries to the bottom of the log file
+    :return: nothing, will send entries to make_order()
     """
     pdfFileObj = open(fh, 'rb')
     pdfReader = PyPDF2.PdfFileReader(pdfFileObj) # creating a pdf reader object
@@ -104,7 +106,7 @@ def get_extract_pdf(fh):
 
 def get_folkhalso_update():
     """
-    :return: nothing, calls other functions and prints info to STDOUT
+    :return: nothing, looks for updates and sends pdfs to get_extract_pdf
     """
     url = "https://www.folkhalsomyndigheten.se/smittskydd-beredskap/utbrott/aktuella-utbrott/covid-19/statistik-och-analyser/veckorapporten-om-covid-19/"
     # Make a GET request to fetch the raw HTML content
@@ -123,10 +125,12 @@ def get_folkhalso_update():
                 get_extract_pdf(file_name)
             else:
                 continue
-    with open(status_updates, 'w') as f:
-        for line in my_run_list:
-            if line.strip() != '':
-                print(line, file=f)
+
+
+def display_update():
+    """
+    :return: nothing, will print appropriate text from log
+    """
     with open(status_updates, 'r') as f:
         my_entries = []
         for line in f:
@@ -135,12 +139,23 @@ def get_folkhalso_update():
             print(translator.translate(my_entries[time_check][:args.c]).text)
         else: print(my_entries[time_check][:args.c])
 
+def write_log():
+    """
+    :return: nothing, will print the updated entry list to file
+    """
+    with open(status_updates, 'w') as f:
+        for line in my_run_list:
+            if line.strip() != '':
+                print(line, file=f)
+
 
 
 
 
 check_logs()
 get_folkhalso_update()
+write_log()
+display_update()
 
 
 
